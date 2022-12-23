@@ -10,6 +10,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+#[allow(dead_code)]
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,

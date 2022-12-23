@@ -1,4 +1,3 @@
-use image::flat::View;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 #[rustfmt::skip]
