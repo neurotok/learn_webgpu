@@ -11,8 +11,15 @@ bytemuck = { version = "1.4", features = [ "derive" ] }
 cfg-if = "1.0.0"
 cgmath = "0.18.0"
 env_logger = "0.9.3"
+fs_extra = "1.2"
 image = { version =  "0.24" }
 log = "0.4.17"
 pollster = "0.2.5"
+tobj = {version = "3.2.3", features = ["async"] }
 wgpu = "0.14.0"
 winit = "0.27.5"
+
+[build-dependencies]
+anyhow = "1.0"
+fs_extra = "1.2"
+glob = "0.3"

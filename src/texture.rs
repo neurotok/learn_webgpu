@@ -8,7 +8,7 @@ pub struct Texture {
 }
 
 impl Texture {
-	pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
+    pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
     pub fn from_bytes(
         device: &wgpu::Device,
@@ -79,12 +79,11 @@ impl Texture {
         })
     }
 
-	pub fn create_depth_texture(
+    pub fn create_depth_texture(
         device: &wgpu::Device,
-		config: &wgpu::SurfaceConfiguration,
-        label: &str
-	) -> Self {
-
+        config: &wgpu::SurfaceConfiguration,
+        label: &str,
+    ) -> Self {
         let size = wgpu::Extent3d {
             width: config.width,
             height: config.height,
@@ -101,9 +100,9 @@ impl Texture {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         };
 
-		let texture = device.create_texture(&desc);
+        let texture = device.create_texture(&desc);
 
-		let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -111,17 +110,16 @@ impl Texture {
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::FilterMode::Nearest,
-			compare: Some(wgpu::CompareFunction::LessEqual),
-			lod_min_clamp: -100.0,
-			lod_max_clamp: 100.0,
+            compare: Some(wgpu::CompareFunction::LessEqual),
+            lod_min_clamp: -100.0,
+            lod_max_clamp: 100.0,
             ..Default::default()
         });
 
-		Self {
-			texture,
-			view,
-			sampler,
-		}
-
-	}
+        Self {
+            texture,
+            view,
+            sampler,
+        }
+    }
 }
