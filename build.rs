@@ -1,6 +1,6 @@
 use anyhow::*;
-use fs_extra::dir::CopyOptions;
 use fs_extra::copy_items;
+use fs_extra::dir::CopyOptions;
 
 fn main() -> Result<()> {
     println!("cargo:rerun-if-changed=res/*");
