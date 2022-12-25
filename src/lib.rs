@@ -6,7 +6,7 @@ mod texture;
 use crate::model::{DrawModel, Vertex};
 
 use cgmath::{InnerSpace, Rotation3, Zero};
-use wgpu::{util::DeviceExt, ShaderModule};
+use wgpu::{util::DeviceExt};
 
 use winit::{
     event::*,
@@ -106,7 +106,7 @@ fn create_render_pipeline(
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",
-            buffers: &[model::ModelVertex::desc(), InstanceRaw::desc()],
+            buffers: vertex_layout,
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
