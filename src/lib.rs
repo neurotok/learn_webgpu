@@ -6,7 +6,8 @@ mod texture;
 use crate::model::{DrawModel, Vertex};
 
 use cgmath::{InnerSpace, Rotation3, Zero};
-use wgpu::{util::DeviceExt, BindingType, ShaderStages};
+use model::Material;
+use wgpu::{util::DeviceExt, ShaderStages};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -34,6 +35,7 @@ struct State {
     light_buffer: wgpu::Buffer,
     light_bind_group: wgpu::BindGroup,
     light_render_pipeline: wgpu::RenderPipeline,
+    debug_material: Material,
 }
 
 struct Instance {
@@ -47,7 +49,7 @@ impl Instance {
             model: (cgmath::Matrix4::from_translation(self.position)
                 * cgmath::Matrix4::from(self.rotation))
             .into(),
-			normal: cgmath::Matrix3::from(self.rotation).into(),
+            normal: cgmath::Matrix3::from(self.rotation).into(),
         }
     }
 }
@@ -55,12 +57,11 @@ impl Instance {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct InstanceRaw {
     model: [[f32; 4]; 4],
-	normal: [[f32; 3]; 3],
+    normal: [[f32; 3]; 3],
 }
 
 impl InstanceRaw {
-    const ATTRIBS: [wgpu::VertexAttribute; 7] =
-        wgpu::vertex_attr_array![5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x3, 10 => Float32x3, 11 => Float32x3];
+    const ATTRIBS: [wgpu::VertexAttribute; 7] = wgpu::vertex_attr_array![5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x3, 10 => Float32x3, 11 => Float32x3];
 
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
@@ -199,22 +200,22 @@ impl State {
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
-					wgpu::BindGroupLayoutEntry{
-						binding: 2,
-						visibility: ShaderStages::FRAGMENT,
-						ty: wgpu::BindingType::Texture {
-							multisampled: false,
-							sample_type:wgpu::TextureSampleType::Float { filterable: true },
-							view_dimension: wgpu::TextureViewDimension::D2,
-						},
-						count: None,
-					},
-					wgpu::BindGroupLayoutEntry{
-						binding: 3,
-						visibility: wgpu::ShaderStages::FRAGMENT,
-						ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-						count: None,
-					}
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
                 ],
                 label: Some("texture_bind_group_layout"),
             });
@@ -311,7 +312,7 @@ impl State {
                     } else {
                         cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
                     };
-					//let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(180.0));
+                    //let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(180.0));
 
                     Instance { position, rotation }
                 })
@@ -354,25 +355,54 @@ impl State {
             )
         };
 
-		let light_render_pipeline = {
-			let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
-				label: Some("Light pipeline layout"),
-				bind_group_layouts: &[&camera_bind_group_layout, &light_bind_group_layout],
-				push_constant_ranges: &[],
-			});			
+        let light_render_pipeline = {
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Light pipeline layout"),
+                bind_group_layouts: &[&camera_bind_group_layout, &light_bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
             let shader = wgpu::include_wgsl!("light.wgsl");
 
-			create_render_pipeline(
-				&device,
-				&layout,
-				config.format,
-				Some(texture::Texture::DEPTH_FORMAT),
-				&[model::ModelVertex::desc()],
-				shader,
-			)
-			
-		};
+            create_render_pipeline(
+                &device,
+                &layout,
+                config.format,
+                Some(texture::Texture::DEPTH_FORMAT),
+                &[model::ModelVertex::desc()],
+                shader,
+            )
+        };
+
+        let debug_material = {
+            let diffuse_bytes = include_bytes!("../res/cobblestone-diffuse.jpg");
+            let normal_bytes = include_bytes!("../res/cobblestone-normal.jpg");
+
+            let diffuse_texure = texture::Texture::from_bytes(
+                &device,
+                &queue,
+                diffuse_bytes,
+                "res/cobblestone-diffuse.jpg",
+                false,
+            )
+            .unwrap();
+            let normal_texture = texture::Texture::from_bytes(
+                &device,
+                &queue,
+                normal_bytes,
+                "res/cobblestone-normal.jpg",
+                true,
+            )
+            .unwrap();
+
+            model::Material::new(
+                &device,
+                "alt-material",
+                diffuse_texure,
+                normal_texture,
+                &texture_bind_group_layout,
+            )
+        };
 
         Self {
             surface,
@@ -390,10 +420,11 @@ impl State {
             instance_buffer,
             depth_texture,
             obj_model,
-			light_uniform,
+            light_uniform,
             light_buffer,
-			light_bind_group,
-			light_render_pipeline,
+            light_bind_group,
+            light_render_pipeline,
+            debug_material,
         }
     }
 
@@ -469,7 +500,7 @@ impl State {
 
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
-			use crate::model::DrawLight;
+            use crate::model::DrawLight;
             render_pass.set_pipeline(&self.light_render_pipeline);
             render_pass.draw_light_model(
                 &self.obj_model,
@@ -478,8 +509,15 @@ impl State {
             );
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw_model_instanced(
+            // render_pass.draw_model_instanced(
+            //     &self.obj_model,
+            //     0..self.instances.len() as u32,
+            //     &self.camera_bind_group,
+            //     &self.light_bind_group,
+            // );
+            render_pass.draw_model_instanced_with_material(
                 &self.obj_model,
+                &self.debug_material,
                 0..self.instances.len() as u32,
                 &self.camera_bind_group,
                 &self.light_bind_group,
